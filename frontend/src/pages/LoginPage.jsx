@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -26,9 +28,9 @@ function LoginPage() {
                 throw new Error(data.message || 'Failed to login');
             }
 
-            // On successful login, you would typically save a token and redirect
-            console.log('Login successful:', data);
-            // For now, we'll just redirect to a placeholder dashboard
+            // On successful login, update the auth state...
+            login();
+            // ...and then redirect to the dashboard.
             navigate('/dashboard');
 
         } catch (err) {
