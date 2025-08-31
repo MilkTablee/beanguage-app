@@ -64,7 +64,7 @@ function LoginPage() {
                             required
                         />
                     </div>
-                    <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors">Login</button>
+                    <button type="submit" className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition-colors">Login</button>
                 </form>
                 <p className="text-center mt-4">
                     Don't have an account? <Link to="/register" className="text-blue-500 hover:underline">Register here</Link>

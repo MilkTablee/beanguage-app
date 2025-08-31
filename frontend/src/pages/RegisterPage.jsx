@@ -20,7 +20,7 @@ function RegisterPage() {
                 },
                 body: JSON.stringify({ username, email, password }),
             });
-        
+
             const data = await response.json();
 
             if (!response.ok) {
@@ -30,7 +30,7 @@ function RegisterPage() {
             // On successful registration, redirect to the login page
             navigate('/login');
 
-        } catch(err) {
+        } catch (err) {
             setError(err.message);
         }
     };
@@ -74,7 +74,7 @@ function RegisterPage() {
                             required
                         />
                     </div>
-                    <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors">Register</button>
+                    <button type="submit" className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition-colors">Register</button>
                 </form>
                 <p className="text-center mt-4">
                     Already have an account? <Link to="/login" className="text-blue-500 hover:underline">Login here</Link>
