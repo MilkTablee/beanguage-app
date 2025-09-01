@@ -25,12 +25,13 @@ function LoginPage() {
             const data = await response.json();
 
             if (!response.ok) {
+                // Use the error message from the server response
                 throw new Error(data.message || 'Failed to login');
             }
 
-            // On successful login, update the auth state...
-            login();
-            // ...and then redirect to the dashboard.
+            // On successful login, pass the received token to the login function
+            // from our AuthContext. This will store it and update the auth state.
+            login(data.token);
             navigate('/dashboard');
 
         } catch (err) {

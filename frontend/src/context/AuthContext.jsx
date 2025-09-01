@@ -2,22 +2,30 @@ import React, { createContext, useState, useContext } from 'react';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-    // For now, store the authentication state in memory.
-    // TODO: Later, enhance this to use localStorage to persist the session
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+const TOKEN_KEY = 'user_token';
 
-    const login = () => {
-        // TODO: Handle token here
-        setIsAuthenticated(true);
+export function AuthProvider({ children }) {
+    // Initialise the token state from localStorage.
+    // This makes the session persistent across page reloads.
+    const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+
+    // The login function now accepts a token, saves it to localStorage,
+    // and updates the state.
+    const login = (newToken) => {
+        localStorage.setItem(TOKEN_KEY, newToken);
+        setToken(newToken);
     };
     
     const logout = () => {
-        // TODO: Clear the token/session data
-        setIsAuthenticated(false);
+        localStorage.removeItem(TOKEN_KEY);
+        setToken(null);
     };
 
+    // The user is authenticated if a token exists. This is derived state.
+    const isAuthenticated = !!token;
+
     const value = {
+        token,
         isAuthenticated,
         login,
         logout,

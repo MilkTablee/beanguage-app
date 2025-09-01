@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const db = require('./db');
 require('dotenv').config();
 
@@ -27,9 +28,15 @@ app.post('/api/register', async (req, res) => {
     }
 
     try {
-        // Check if user already exists
-        const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userExists.rows.length > 0) {
+        // Check if username already exists
+        const usernameExists = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+        if (usernameExists.rows.length > 0) {
+            return res.status(409).json({ message: 'Username is already taken.' });
+        }
+
+        // Check if email already exists
+        const emailExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (emailExists.rows.length > 0) {
             return res.status(409).json({ message: 'User with this email already exists.' });
         }
 
@@ -50,6 +57,24 @@ app.post('/api/register', async (req, res) => {
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Check Username Availability Route
+app.get('/api/check-username', async (req, res) => {
+    const { username } = req.query;
+
+    if (!username) {
+        return res.status(400).json({ message: 'Username is required.' });
+    }
+
+    try {
+        const result = await db.query('SELECT 1 FROM users WHERE username = $1', [username]);
+        const isAvailable = result.rows.length === 0;
+        res.json({ available: isAvailable });
+    } catch (error) {
+        console.error('Error checking username availability:', error);
+        res.status(500).json({ message: 'Server error checking username availability.' });
     }
 });
 
@@ -77,12 +102,23 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // On successful login, you would typically create a session or JWT.
-        // For now, we'll just send a success message.
-        res.json({
-            message: 'Login successful',
-            user: { id: user.id, username: user.username, email: user.email }
-        });
+        // On successful login, create a JWT payload
+        const payload = {
+            user: {
+                id: user.id,
+                username: user.username
+            }
+        };
+
+        // Sign the token with the secret key, setting it to expire in 1 hour
+        const token = jwt.sign(
+            payload,
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // Send the token back to the client
+        res.json({ token });
 
     } catch (error) {
         console.error('Login error:', error);
