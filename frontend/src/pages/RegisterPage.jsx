@@ -5,10 +5,20 @@ function RegisterPage() {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [usernameAvailable, setUsernameAvailable] = useState(null); // null: not checked, true: available, false: taken
-    const [usernameCheckLoading, setUsernameCheckLoading] = useState(false);
-    const [usernameCheckMessage, setUsernameCheckMessage] = useState('');
-    const usernameCheckTimeoutRef = useRef(null); // Ref to store the timeout ID for debouncing
+    const [isUsernameFocused, setIsUsernameFocused] = useState(false);
+    const [isEmailFocused, setIsEmailFocused] = useState(false);
+    const [usernameStatus, setUsernameStatus] = useState({
+        loading: false,
+        available: null, // null: not checked, true: available, false: taken
+        message: '',
+    });
+    const [emailStatus, setEmailStatus] = useState({
+        loading: false,
+        available: null,
+        message: '',
+    });
+    const usernameCheckTimeoutRef = useRef(null);
+    const emailCheckTimeoutRef = useRef(null);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
@@ -46,11 +56,9 @@ function RegisterPage() {
             clearTimeout(usernameCheckTimeoutRef.current);
         }
 
-        // Only check if username is not empty
-        if (username.length > 0) {
-            setUsernameCheckLoading(true);
-            //setUsernameCheckMessage('Checking availability...');
-            setUsernameAvailable(null); // Reset availability status
+        // Only check if username is not empty (and trim whitespace)
+        if (username.trim().length > 0) {
+            setUsernameStatus({ loading: true, available: null, message: 'Checking availability...' });
 
             usernameCheckTimeoutRef.current = setTimeout(async () => {
                 try {
@@ -58,25 +66,72 @@ function RegisterPage() {
                     const data = await response.json();
 
                     if (response.ok) {
-                        setUsernameAvailable(data.available);
-                        setUsernameCheckMessage(data.available ? 'Username is available!' : 'Username is already taken.');
+                        setUsernameStatus({
+                            loading: false,
+                            available: data.available,
+                            message: data.available ? 'Username is available!' : 'Username is already taken.',
+                        });
                     } else {
-                        setUsernameAvailable(null); // Indicate an error or unable to check
-                        setUsernameCheckMessage(data.message || 'Error checking username.');
+                        setUsernameStatus({
+                            loading: false,
+                            available: null, // Indicate an error or unable to check
+                            message: data.message || 'Error checking username.',
+                        });
                     }
                 } catch (err) {
-                    setUsernameAvailable(null);
-                    setUsernameCheckMessage('Network error checking username.');
-                } finally {
-                    setUsernameCheckLoading(false);
+                    setUsernameStatus({
+                        loading: false,
+                        available: null,
+                        message: 'Network error checking username.',
+                    });
                 }
             }, 500); // Debounce for 500ms
         } else {
-            setUsernameAvailable(null);
-            setUsernameCheckLoading(false);
-            setUsernameCheckMessage('');
+            setUsernameStatus({ loading: false, available: null, message: '' });
         }
     }, [username]); // Re-run this effect whenever the username changes
+
+    // Debounce email availability check
+    useEffect(() => {
+        if (emailCheckTimeoutRef.current) {
+            clearTimeout(emailCheckTimeoutRef.current);
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email.trim().length > 0) {
+            if (!emailRegex.test(email)) {
+                setEmailStatus({ loading: false, available: false, message: 'Please enter a valid email.' });
+                return;
+            }
+
+            setEmailStatus({ loading: true, available: null, message: 'Checking availability...' });
+
+            emailCheckTimeoutRef.current = setTimeout(async () => {
+                try {
+                    const response = await fetch(`http://localhost:3001/api/check-email?email=${email}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        setEmailStatus({
+                            loading: false,
+                            available: data.available,
+                            message: data.available ? '' : 'Email is already registered.',
+                        });
+                    } else {
+                        setEmailStatus({ loading: false, available: null, message: data.message || 'Error checking email.' });
+                    }
+                } catch (err) {
+                    setEmailStatus({
+                        loading: false,
+                        available: null,
+                        message: 'Network error checking email.',
+                    });
+                }
+            }, 500);
+        } else {
+            setEmailStatus({ loading: false, available: null, message: '' });
+        }
+    }, [email]);
 
     return (
         <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -97,9 +152,22 @@ function RegisterPage() {
                                     setError('');
                                 }
                             }}
+                            onFocus={() => setIsUsernameFocused(true)}
+                            onBlur={() => setIsUsernameFocused(false)}
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
                             required
                         />
+                        {/* This container reserves space to prevent layout shifts */}
+                        <div className="h-5 mt-1">
+                            {isUsernameFocused && usernameStatus.message && (
+                                <p className={`text-sm ${
+                                    usernameStatus.loading ? 'text-gray-500' :
+                                    usernameStatus.available ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                    {usernameStatus.message}
+                                </p>
+                            )}
+                        </div>
                     </div>
                     <div className="mb-4">
                         <label className="block text-gray-700 mb-2" htmlFor="email">Email</label>
@@ -107,10 +175,27 @@ function RegisterPage() {
                             type="email"
                             id="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                if (error.includes('email already exists')) {
+                                    setError('');
+                                }
+                            }}
+                            onFocus={() => setIsEmailFocused(true)}
+                            onBlur={() => setIsEmailFocused(false)}
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
                             required
                         />
+                        <div className="h-5 mt-1">
+                            {isEmailFocused && emailStatus.message && (
+                                <p className={`text-sm ${
+                                    emailStatus.loading ? 'text-gray-500' :
+                                    emailStatus.available ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                    {emailStatus.message}
+                                </p>
+                            )}
+                        </div>
                     </div>
                     <div className="mb-6">
                         <label className="block text-gray-700 mb-2" htmlFor="password">Password</label>
@@ -123,16 +208,14 @@ function RegisterPage() {
                             required
                         />
                     </div>
-                    {usernameCheckLoading && <p className="text-sm text-gray-500 mb-2">Checking username...</p>}
-                    {usernameCheckMessage && (
-                        <p className={`text-sm mb-2 ${usernameAvailable ? 'text-green-600' : 'text-red-600'}`}>
-                            {usernameCheckMessage}
-                        </p>
-                    )}
                     <button
                         type="submit"
-                        className={`w-full text-white py-2 rounded-lg transition-colors ${usernameAvailable === false || usernameCheckLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark'}`}
-                        disabled={usernameAvailable === false || usernameCheckLoading}
+                        className={`w-full text-white py-2 rounded-lg transition-colors ${
+                            usernameStatus.available === false || usernameStatus.loading ||
+                            emailStatus.available === false || emailStatus.loading
+                            ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark'}`}
+                        disabled={usernameStatus.available === false || usernameStatus.loading ||
+                                  emailStatus.available === false || emailStatus.loading}
                     >Register</button>
                 </form>
                 <p className="text-center mt-4">

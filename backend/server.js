@@ -28,18 +28,6 @@ app.post('/api/register', async (req, res) => {
     }
 
     try {
-        // Check if username already exists
-        const usernameExists = await db.query('SELECT * FROM users WHERE username = $1', [username]);
-        if (usernameExists.rows.length > 0) {
-            return res.status(409).json({ message: 'Username is already taken.' });
-        }
-
-        // Check if email already exists
-        const emailExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (emailExists.rows.length > 0) {
-            return res.status(409).json({ message: 'User with this email already exists.' });
-        }
-
         // Hash the password
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -75,6 +63,24 @@ app.get('/api/check-username', async (req, res) => {
     } catch (error) {
         console.error('Error checking username availability:', error);
         res.status(500).json({ message: 'Server error checking username availability.' });
+    }
+});
+
+// Check Email Availability Route
+app.get('/api/check-email', async (req, res) => {
+    const { email } = req.query;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required.' });
+    }
+
+    try {
+        const result = await db.query('SELECT 1 FROM users WHERE email = $1', [email]);
+        const isAvailable = result.rows.length === 0;
+        res.json({ available: isAvailable });
+    } catch (error) {
+        console.error('Error checking email availability:', error);
+        res.status(500).json({ message: 'Server error checking email availability.' });
     }
 });
 
