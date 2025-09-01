@@ -21,7 +21,7 @@ const Header = forwardRef(({ isSticky }, ref) => {
     return (
         <header ref={ref} className={`${baseClasses} ${stickyClasses}`}>
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-                <Link to="/" className="text-2xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                <Link to={isAuthenticated ? '/dashboard' : '/'} className="text-2xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
                     Beanguage
                 </Link>
                 {isAuthenticated && (
